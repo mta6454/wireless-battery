@@ -1,0 +1,44 @@
+[package]
+name = "wireless-battery"
+version = "0.1.0"
+edition = "2021"
+description = "Battery levels of wireless mice, headsets, keyboards and controllers (Windows + macOS)"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+# macos-shared-device: open mice/keyboards in shared mode so the OS keeps using them.
+hidapi = { version = "2", features = ["macos-shared-device"] }
+notify-rust = "4.19.0"
+# ATK N9 Pro headset: USB virtual COM port. No libudev needed.
+serialport = { version = "4", default-features = false }
+tao = "0.37.2"
+tray-icon = "0.26.1"
+
+# Start at login via a LaunchAgent. Windows writes its own HKCU Run value (see src/autostart.rs).
+[target.'cfg(not(windows))'.dependencies]
+auto-launch = "0.6.0"
+
+# Pure-Rust Windows HID backend: no C toolchain needed to build.
+[target.'cfg(windows)'.dependencies]
+hidapi = { version = "2", features = ["windows-native"] }
+# Bluetooth battery (SetupAPI device properties), registry (autostart), mutex and event
+# (single instance, --quit).
+windows-sys = { version = "0.61", features = ["Win32_Devices_DeviceAndDriverInstallation", "Win32_Devices_HumanInterfaceDevice", "Win32_Devices_Properties", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem", "Win32_System_LibraryLoader", "Win32_UI_Controls", "Win32_UI_HiDpi", "Win32_UI_Shell", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging", "Win32_Security", "Win32_System_Registry", "Win32_System_Threading"] }
+
+# Xbox controller battery (Windows.Gaming.Input + XInput fallback).
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.61"
+features = ["Devices_Power", "Foundation", "Gaming_Input", "System_Power", "Win32_System_WinRT", "Win32_UI_Input_XboxController"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10.1"
+core-graphics = "0.25.0"
+
+[build-dependencies]
+embed-resource = "3"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+codegen-units = 1

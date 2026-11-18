@@ -1,0 +1,6 @@
+/target
+/dist
+/build
+/third_party
+.DS_Store
+/installer/THIRD_PARTY_LICENSES.txt

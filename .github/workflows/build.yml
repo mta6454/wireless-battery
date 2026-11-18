@@ -1,0 +1,122 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+# Read-only by default: builds of pull requests cannot change the repository or releases.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Actions are pinned to exact commits so a moved tag cannot swap in different code.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+
+      # The unit tests use scripted mock devices, so no hardware is needed.
+      - name: Test
+        run: cargo test --locked
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+
+      - name: Work out the version
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF_NAME.Substring(1) } else { '0.0.0' }
+          "WB_VERSION=$version" >> $env:GITHUB_ENV   # also read by build.rs for the exe's version resource
+
+      # build.rs embeds the icon, manifest and version resource (needs the MSVC resource compiler, present on the runner).
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Collect Rust crate licenses
+        run: python scripts/third-party-licenses.py --target x86_64-pc-windows-msvc -o installer/THIRD_PARTY_LICENSES.txt
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer and portable zip
+        shell: pwsh
+        run: ./installer/build-installer.ps1 -Version $env:WB_VERSION
+
+      - name: Fetch HeadsetControl source (GPL corresponding source for the bundled binary)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://github.com/Sapd/HeadsetControl/releases/download/4.3.0/headsetcontrol-4.3.0.tar.gz -OutFile dist/headsetcontrol-4.3.0.tar.gz
+          if ((Get-FileHash dist/headsetcontrol-4.3.0.tar.gz -Algorithm SHA256).Hash -ne '918dcacf8aef347744b36b2d259d76880fa64b3869f0f8ef26b6576b873d28a7') { throw 'checksum mismatch' }
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: WirelessBattery-windows
+          path: dist/*
+
+  macos:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Rust (both Mac architectures)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Build universal binary
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+          mkdir -p build
+          lipo -create -output build/wireless-battery \
+            target/aarch64-apple-darwin/release/wireless-battery \
+            target/x86_64-apple-darwin/release/wireless-battery
+          lipo -info build/wireless-battery
+
+      - name: Collect Rust crate licenses
+        run: python3 scripts/third-party-licenses.py --target aarch64-apple-darwin -o installer/THIRD_PARTY_LICENSES.txt
+
+      - name: Package .app bundle
+        run: |
+          version="0.0.0"
+          case "$GITHUB_REF" in refs/tags/v*) version="${GITHUB_REF_NAME#v}" ;; esac
+          ./scripts/package-macos.sh "$version" build/wireless-battery dist
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: WirelessBattery-macos
+          path: dist/*.zip
+
+  # Only this job can publish, and only for version tags pushed by the maintainer.
+  release:
+    needs: [windows, macos]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: WirelessBattery-*
+          merge-multiple: true
+          path: dist
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: dist/*
