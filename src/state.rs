@@ -44,6 +44,7 @@ impl Tracker {
     pub fn on_results(&mut self, results: Vec<DeviceStatus>, now: Instant) -> Vec<Notice> {
         let mut notices = Vec::new();
         let mut seen = Vec::new();
+        let names: Vec<String> = results.iter().map(|s| s.name.to_lowercase()).collect();
         for s in results {
             seen.push(s.key.clone());
             let e = self.entries.entry(s.key.clone()).or_insert_with(|| Entry {
@@ -66,8 +67,10 @@ impl Tracker {
                 return true;
             }
             // Some receivers drop sleeping devices from the link; keep the last value for a while.
+            // The same device now reported under another key (receiver -> Bluetooth) replaces the old entry.
             let in_grace = e.st.grace_sec > 0
                 && e.st.connected
+                && !names.contains(&e.st.name.to_lowercase())
                 && now.duration_since(e.last_seen) < Duration::from_secs(e.st.grace_sec as u64);
             if in_grace {
                 e.st.percent = None;
@@ -265,6 +268,43 @@ mod tests {
         assert!(e.st.asleep && e.st.percent.is_none() && e.shown() == Some(50));
         t.on_results(vec![], t0 + Duration::from_secs(120));
         assert!(t.entries.is_empty());
+    }
+
+    #[test]
+    fn headset_switched_off_and_on_again() {
+        let t0 = Instant::now();
+        let mut t = Tracker::default();
+        let mut h = dev("h", Some(60));
+        h.grace_sec = 180;
+        t.on_results(vec![h.clone()], t0);
+        // switched off: the dongle stops answering, the last value stays, marked asleep
+        t.on_results(vec![], t0 + Duration::from_secs(30));
+        assert_eq!(status_text(&t.entries["h"]), "60% (last known), asleep");
+        // switched on again (a higher reading than before is believed at once: nothing was live)
+        h.percent = Some(65);
+        t.on_results(vec![h.clone()], t0 + Duration::from_secs(90));
+        let e = &t.entries["h"];
+        assert_eq!((e.st.percent, e.st.asleep, status_text(e).as_str()), (Some(65), false, "65%"));
+        // off for longer than the grace period: gone; back on: listed again
+        t.on_results(vec![], t0 + Duration::from_secs(120));
+        t.on_results(vec![], t0 + Duration::from_secs(400));
+        assert!(t.entries.is_empty());
+        t.on_results(vec![h], t0 + Duration::from_secs(430));
+        assert_eq!(t.entries["h"].st.percent, Some(65));
+    }
+
+    #[test]
+    fn grace_entry_is_replaced_by_the_same_device_under_a_new_key() {
+        let t0 = Instant::now();
+        let mut t = Tracker::default();
+        let mut dongle = dev("mchose:A8A5", Some(70));
+        dongle.name = "MCHOSE G3 A".into();
+        dongle.grace_sec = 180;
+        t.on_results(vec![dongle], t0);
+        let mut bt = dev("bt:xyz", Some(70));
+        bt.name = "mchose g3 a".into();
+        t.on_results(vec![bt], t0 + Duration::from_secs(30));
+        assert_eq!(t.entries.keys().collect::<Vec<_>>(), ["bt:xyz"]);
     }
 
     #[test]
