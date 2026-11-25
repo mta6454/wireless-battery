@@ -268,6 +268,29 @@ mod tests {
     }
 
     #[test]
+    fn headset_switched_off_and_on_again() {
+        let t0 = Instant::now();
+        let mut t = Tracker::default();
+        let mut h = dev("h", Some(60));
+        h.grace_sec = 180;
+        t.on_results(vec![h.clone()], t0);
+        // switched off: the dongle stops answering, the last value stays, marked asleep
+        t.on_results(vec![], t0 + Duration::from_secs(30));
+        assert_eq!(status_text(&t.entries["h"]), "60% (last known), asleep");
+        // switched on again (a higher reading than before is believed at once: nothing was live)
+        h.percent = Some(65);
+        t.on_results(vec![h.clone()], t0 + Duration::from_secs(90));
+        let e = &t.entries["h"];
+        assert_eq!((e.st.percent, e.st.asleep, status_text(e).as_str()), (Some(65), false, "65%"));
+        // off for longer than the grace period: gone; back on: listed again
+        t.on_results(vec![], t0 + Duration::from_secs(120));
+        t.on_results(vec![], t0 + Duration::from_secs(400));
+        assert!(t.entries.is_empty());
+        t.on_results(vec![h], t0 + Duration::from_secs(430));
+        assert_eq!(t.entries["h"].st.percent, Some(65));
+    }
+
+    #[test]
     fn visible_sorted_and_filtered() {
         let mut t = Tracker::default();
         let mut mouse = dev("m", Some(50));

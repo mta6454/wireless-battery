@@ -26,12 +26,18 @@ fn query(d: &mut impl HidIo, req: &[u8], timeout_ms: u64, matches: impl Fn(&[u8]
     }
 }
 
+/// How long a headset stays listed (as "last known") after the dongle stops answering.
+const GRACE_SEC: u32 = 180;
+
 fn base(pid: u16, name: &str) -> DeviceStatus {
     DeviceStatus {
         key: format!("hyperx:{}", hex4(pid)),
         name: name.to_string(),
         kind: DeviceKind::Headset,
         via: "2.4 GHz receiver".into(),
+        // A busy dongle (audio streaming) sometimes misses a reply: keep the last reading for a while
+        // instead of dropping the headset from the list for one failed poll.
+        grace_sec: GRACE_SEC,
         ..Default::default()
     }
 }
@@ -211,7 +217,8 @@ pub fn poll(ctx: &mut PollContext) {
             }
             for c in ctx.find(m.vid, pid, m.accept) {
                 let Some(mut d) = HidDev::open(ctx.api, &c) else { continue };
-                if let Some(s) = (m.poll)(&mut d, pid) {
+                // One retry: the dongle can miss a reply while it is busy streaming audio.
+                if let Some(s) = (m.poll)(&mut d, pid).or_else(|| (m.poll)(&mut d, pid)) {
                     ctx.add(s, m.vid, pid);
                     break;
                 }
@@ -298,6 +305,11 @@ mod tests {
         });
         let s = cloud3(&mut m, 0x0C9D).unwrap();
         assert_eq!((s.percent, s.millivolts), (None, 0));
+    }
+
+    #[test]
+    fn headsets_get_a_grace_period() {
+        assert_eq!(base(0x0696, "x").grace_sec, GRACE_SEC);
     }
 
     #[test]
