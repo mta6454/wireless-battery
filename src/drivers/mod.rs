@@ -109,5 +109,43 @@ pub fn poll_all(api: &HidApi) -> Vec<DeviceStatus> {
     generic::poll(&mut ctx); // generic HID battery usage, last of the HID drivers
     bluetooth::poll(&mut ctx);
     xinput::poll(&mut ctx); // Xbox controllers, last
+    apply_default_grace(&mut ctx.out);
     ctx.out
+}
+
+/// How long a device of the families below stays listed as "last known" after a poll misses it.
+const DEFAULT_GRACE_SEC: u32 = 180;
+
+/// 2.4 GHz receivers can miss a reply (busy dongle, device asleep or between channels), and one
+/// missed poll must not make the device vanish from the tray. Families whose driver already sets
+/// a grace keep it; Razer, ROG, Bluetooth, Xbox/XInput, PlayStation, GameSir, generic HID and the
+/// direct Logitech links are left alone, because there a missing device really is gone.
+fn apply_default_grace(list: &mut [DeviceStatus]) {
+    const FAMILIES: [&str; 17] = [
+        "ajazz:", "ajazzaj:", "aula:", "corsair:", "glorious:", "gwolves:", "hitscan:", "hsc:", "inzone:", "keychron:",
+        "kysona:", "lamzu:", "mchose:", "motospeed:", "rongyuan:", "steelseries:", "xenta:",
+    ];
+    for s in list {
+        if s.grace_sec == 0 && FAMILIES.iter().any(|f| s.key.starts_with(f)) {
+            s.grace_sec = DEFAULT_GRACE_SEC;
+        }
+    }
+}
+
+#[cfg(test)]
+mod grace_tests {
+    use super::*;
+
+    fn st(key: &str) -> DeviceStatus {
+        DeviceStatus { key: key.into(), ..Default::default() }
+    }
+
+    #[test]
+    fn receiver_families_get_a_grace_others_do_not() {
+        let mut v = vec![st("lamzu:A8A5:2255"), st("hsc:046D:0AB7"), st("razer:00AB"), st("bt:xyz"), st("xbox:0B13:0"), st("logi:C52B:0")];
+        v[5].grace_sec = 1800;
+        apply_default_grace(&mut v);
+        let g: Vec<u32> = v.iter().map(|s| s.grace_sec).collect();
+        assert_eq!(g, [180, 180, 0, 0, 0, 1800]);
+    }
 }
