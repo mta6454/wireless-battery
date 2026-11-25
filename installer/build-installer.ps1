@@ -40,7 +40,7 @@ $stage = Join-Path $root "build\portable"
 Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $stage | Out-Null
 Copy-Item $exe (Join-Path $stage "WirelessBattery.exe")
-Copy-Item $hscExe, installer\THIRD_PARTY_NOTICES.txt $stage
+Copy-Item $hscExe, installer\THIRD_PARTY_NOTICES.txt, installer\GPL-3.0.txt $stage
 $licenses = Join-Path $root "installer\THIRD_PARTY_LICENSES.txt"   # made by scripts/third-party-licenses.py
 if (Test-Path $licenses) { Copy-Item $licenses $stage } else { Write-Warning "installer\THIRD_PARTY_LICENSES.txt not found: Rust crate licenses will be missing from the package." }
 Copy-Item LICENSE (Join-Path $stage "LICENSE.txt")

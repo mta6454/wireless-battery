@@ -3,7 +3,7 @@ name = "wireless-battery"
 version = "0.1.0"
 edition = "2021"
 description = "Battery levels of wireless mice, headsets, keyboards and controllers (Windows + macOS)"
-license = "GPL-3.0-or-later"
+license = "MIT"
 
 [dependencies]
 # macos-shared-device: open mice/keyboards in shared mode so the OS keeps using them.

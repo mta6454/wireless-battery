@@ -2,7 +2,7 @@
 
 ## Reporting whether a device works
 
-Most drivers were written from protocol documentation and could not be tested on every model, and this Rust port has not yet been verified against real hardware at all. Please open an issue with:
+Most drivers were written from protocol documentation and could not be tested on every model, and it has not yet been verified against real hardware at all. Please open an issue with:
 
 - your operating system (Windows or macOS, and the version)
 - the device name, and whether it is connected by receiver, cable or Bluetooth

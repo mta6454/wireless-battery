@@ -2,9 +2,9 @@
 
 Battery levels of your wireless mouse, headset, keyboard and controller, in the **Windows** system tray and the **macOS** menu bar.
 
-This is a Rust port of [Wireless Battery](https://github.com/krisgfx9/Wireless-Device-Battery-Monitor), which is Windows-only C++/Win32. It reuses that project's device research and protocol tables (see [Credits](#credits)) and is released under the same license.
+It is written in Rust, runs on both platforms from one code base, and builds on the research of the projects listed under [Credits](#credits).
 
-> **Status: early port.** Every driver has unit tests against scripted mock devices, and CI builds and tests on Windows and macOS, but **the drivers have not yet been verified against real hardware** in this port. The original C++ app has been tested on some devices; this one has not. If you own one of the supported devices, please report whether it works (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+> **Status: early.** Every driver has unit tests against scripted mock devices, and CI builds and tests on Windows and macOS, but **the drivers have not yet been verified against real hardware**. If you own one of the supported devices, please report whether it works (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 - **Small:** a single native binary of about 1.3 MB, no runtime, no background service.
 - **No vendor software needed:** it talks to the devices directly. G HUB, Synapse, iCUE and the like can stay closed.
@@ -21,7 +21,7 @@ This is a Rust port of [Wireless Battery](https://github.com/krisgfx9/Wireless-D
 
 Hover (Windows) for details. Click for the menu: every device (click one to hide or show it), *Hide last known / asleep devices*, *Refresh now*, *Start at login* and *Exit*. Levels refresh every 30 seconds; plugging in or unplugging a device is noticed within about two seconds. While a full-screen game or presentation is in front (Windows), it reads only every 5 minutes and stops watching for plugged devices, so it stays out of the way; *Refresh now* still works.
 
-On Windows 10/11 with a horizontal taskbar the default is the original's taskbar widget: one strip next to the notification area (`🎧 30%  🖱 93%⚡`, dimmed when asleep, red when low). Switch it off in the menu (*Show on the taskbar*) to get one tray icon per device instead; a vertical taskbar uses tray icons automatically.
+On Windows 10/11 with a horizontal taskbar the default is a taskbar widget: one strip next to the notification area (`🎧 30%  🖱 93%⚡`, dimmed when asleep, red when low). Switch it off in the menu (*Show on the taskbar*) to get one tray icon per device instead; a vertical taskbar uses tray icons automatically.
 
 ### Reverse mouse scroll (macOS)
 
@@ -31,11 +31,9 @@ It needs the *Accessibility* permission: macOS asks the first time; allow *Wirel
 
 ## Install
 
-Download the file for your system from the Releases page of this repository (or from the artifacts of a CI run). The upstream project's releases are the Windows-only C++ app, not this port:
+Download the file for your system from the Releases page of this repository (or from the artifacts of a CI run).:
 
 - **Windows:** `WirelessBattery-Setup-<version>.exe`. Run it and click through. It needs **no administrator rights** and nothing else installed (HeadsetControl comes bundled). It adds a Start menu entry and an uninstaller (*Settings → Apps*), and can start the app when you sign in. Prefer no installer? Download `WirelessBattery-<version>-portable.zip`, unzip it anywhere and run `WirelessBattery.exe`.
-
-  The installer uses its own app ID, folder (`Wireless Battery Cross`), Start menu entry and startup value, so it can be installed **next to** the original C++ app without replacing it.
 - **macOS:** `WirelessBattery-<version>-macos.zip` (universal: Apple silicon and Intel, macOS 11 or later). Unzip, move `WirelessBattery.app` to *Applications* and open it. It lives in the menu bar and has no Dock icon.
 
 **Notes:**
@@ -91,7 +89,7 @@ Hidden devices and the *Hide last known* choice are stored in `%APPDATA%\Wireles
 | **Generic HID** | Devices reporting the standard HID *Battery Strength* usage | HID usage page 0x06 / 0x85 |
 | **HeadsetControl** | [Every headset it supports](https://github.com/Sapd/HeadsetControl#supported-headsets) (Audeze, Jabra, Sony INZONE, newer Logitech and more) | Bundled; runs `headsetcontrol -o json` |
 
-**Differences by platform.** The table is the original's; these entries read their data differently here:
+**Differences by platform.** These entries read their data differently on each system:
 
 - **Bluetooth:** Windows reads the device property the OS keeps; macOS reads `system_profiler SPBluetoothDataType` and `ioreg` (`BatteryPercent`).
 - **Xbox:** Windows uses `Windows.Gaming.Input` (real percentage) with an XInput fallback. On macOS the app reads `BatteryPercent` from `ioreg` for Xbox (VID 045E) controllers; if macOS does not expose it for your controller, nothing is shown.
@@ -127,15 +125,15 @@ GitHub Actions ([`build.yml`](.github/workflows/build.yml)) runs the tests on Wi
 
 ## Limitations
 
-- **Windows taskbar widget:** ported from the original but only type-checked, never run on a real taskbar.
-- **Windows installer, icon and manifest:** built by CI but not yet run on a real machine in this port.
+- **Windows taskbar widget:** only type-checked, never run on a real taskbar.
+- **Windows installer, icon and manifest:** built by CI but not yet run on a real machine.
 - **MCHOSE 2.4 GHz dongle:** the dongle never reports that the mouse was switched off (it answers with the last values it remembers), so a switched-off mouse keeps its last percentage. Bluetooth mode is detected normally.
 - **Sleeping devices:** a device that is asleep may not answer. Its last value stays visible, dimmed. Logitech receivers drop sleeping devices from the link, so their last value is kept for 30 minutes.
 - **Keychron keyboards:** they only report their battery over Bluetooth (shown via the Bluetooth support). Over the 2.4 GHz receiver the firmware does not expose it. Keychron mice are supported.
 - **Rapoo:** supported VT mice push their status, so a refresh can wait up to 4 seconds per matching interface. Sleeping mice may stay dimmed with their last reading for up to 30 minutes. Support is for Nordic 54L report `07` and legacy VT3 Pro `BB`; CH584 report `08`, office MT/M-series mice and other firmware protocols are not covered by this driver.
 - **Not supported yet:** MSI wireless mice and keyboards, Razer Kraken / Barracuda headsets, HyperX Pulsefire mice and the Xbox Wireless Headset on the Xbox adapter: their battery protocols are not documented. The Xbox Wireless Headset works over Bluetooth. A USB capture from an owner (see CONTRIBUTING.md) is the way to add them.
 - **Other devices:** some 2.4 GHz devices use undocumented protocols and are not supported yet. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to help add one.
-- **macOS standard devices:** see the Input Monitoring note above. Also macOS does not report USB interface numbers, so drivers that the original matched by interface number match by usage page and report length instead, which can mean a few extra harmless probes.
+- **macOS standard devices:** see the Input Monitoring note above. Also macOS does not report USB interface numbers, so drivers match by usage page and report length instead of interface number, which can mean a few extra harmless probes.
 
 ## How it works
 
@@ -175,6 +173,5 @@ The protocols come from these projects' research:
 
 ## License
 
-[GNU General Public License v3.0 or later](LICENSE). You may use, modify and redistribute this
-software, but anything you distribute that is based on it must be released under the same license,
-with its source code.
+[MIT](LICENSE). The bundled HeadsetControl executable is a separate program under the GPL v3; its
+license text ships with the installer as `GPL-3.0.txt`.

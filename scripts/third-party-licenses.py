@@ -69,7 +69,7 @@ def main() -> int:
 
     out = []
     out.append(f"Third-party Rust crates linked into Wireless Battery ({args.target})\n")
-    out.append("Wireless Battery itself is GPL-3.0-or-later (see LICENSE). The crates below are\nused under their own licenses, whose full texts follow the list.\n")
+    out.append("Wireless Battery itself is MIT-licensed (see LICENSE). The crates below are\nused under their own licenses, whose full texts follow the list.\n")
     out.append("=" * 78 + "\nCRATES\n" + "=" * 78)
     for label, lic, repo in summary:
         out.append(f"{label}\n    license: {lic}" + (f"\n    source:  {repo}" if repo else ""))

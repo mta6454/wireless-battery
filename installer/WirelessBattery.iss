@@ -1,10 +1,7 @@
-; Inno Setup script for Wireless Battery (cross-platform port, Windows build) (https://jrsoftware.org/isinfo.php).
+; Inno Setup script for Wireless Battery (Windows build) (https://jrsoftware.org/isinfo.php).
 ; Per-user install by default: no administrator rights needed, installs to %LOCALAPPDATA%\Programs.
 ; Setup also offers "Install for all users" (Program Files, needs administrator rights).
 ; Build with installer\build-installer.ps1 (or: ISCC /DAppVersion=1.2.3 installer\WirelessBattery.iss).
-;
-; The AppId, install folder, Start menu entry and startup value all differ from the original C++
-; app's, so both can be installed side by side without replacing each other.
 
 #ifndef AppVersion
   #define AppVersion "1.0.0"
@@ -42,6 +39,7 @@ Name: "autostart"; Description: "Start Wireless Battery when I sign in to Window
 Source: "{#Root}\target\release\wireless-battery.exe"; DestDir: "{app}"; DestName: "WirelessBattery.exe"; Flags: ignoreversion
 Source: "{#Root}\third_party\headsetcontrol\headsetcontrol.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
+Source: "{#Root}\installer\GPL-3.0.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\installer\THIRD_PARTY_NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\installer\THIRD_PARTY_LICENSES.txt"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
