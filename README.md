@@ -173,6 +173,5 @@ The protocols come from these projects' research:
 
 ## License
 
-[GNU General Public License v3.0 or later](LICENSE). You may use, modify and redistribute this
-software, but anything you distribute that is based on it must be released under the same license,
-with its source code.
+[MIT](LICENSE). The bundled HeadsetControl executable is a separate program under the GPL v3; its
+license text ships with the installer as `GPL-3.0.txt`.

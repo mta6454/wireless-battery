@@ -3,7 +3,7 @@ Wireless Battery bundles the following third-party software.
 HeadsetControl 4.3.0 (headsetcontrol.exe)
   Copyright (C) the HeadsetControl contributors
   https://github.com/Sapd/HeadsetControl
-  License: GNU General Public License v3.0 (same text as LICENSE.txt)
+  License: GNU General Public License v3.0 (full text: GPL-3.0.txt)
   Corresponding source code:
     https://github.com/Sapd/HeadsetControl/releases/tag/4.3.0
     (headsetcontrol-4.3.0.tar.gz is also attached to every Wireless Battery release)
